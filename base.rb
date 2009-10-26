@@ -26,21 +26,7 @@ end
 if yes?("Install authlogic?")
   gem "authlogic"
   
-  file "config/authorization_rules.rb", <<-END
-    authorization do
-      # TODO
-    end
-    privileges do
-      # default privilege hierarchies to facilitate RESTful Rails apps
-      privilege :manage, :includes => [:create, :read, :update, :delete]
-      privilege :read, :includes => [:index, :show]
-      privilege :create, :includes => :new
-      privilege :update, :includes => :edit
-      privilege :delete, :includes => :destroy
-    end
-  END
-  
-  if yes?("Generate user_session, user, role models and user_sessions authbasic components?")
+  if yes?("Generate user_session, user, role models and user_sessions authlogic components?")
     generate(:session, "user_session")
     generate(:nifty_scaffold, "user", "login:string email:string crypted_password:string password_salt:string persistence_token:string single_access_token:string show new edit")
     generate(:nifty_scaffold, "role", "name:string new edit")
@@ -59,10 +45,30 @@ if yes?("Install authlogic?")
 end
 
 # Declarative authorization
-gem "declarative_authorization" if yes?("Install declarative_authorization?")
+if yes?("Install declarative_authorization?")
+  gem "declarative_authorization"
+  
+  file "config/authorization_rules.rb", <<-END
+    authorization do
+      # TODO
+    end
+    privileges do
+      # default privilege hierarchies to facilitate RESTful Rails apps
+      privilege :manage, :includes => [:create, :read, :update, :delete]
+      privilege :read, :includes => [:index, :show]
+      privilege :create, :includes => :new
+      privilege :update, :includes => :edit
+      privilege :delete, :includes => :destroy
+    end
+  END
+end
 
 # Formtastic
-gem "formtastic" if yes?("Install formtastic?")
+if yes?("Install formtastic?")
+  gem "formtastic"
+  
+  generate(:formtastic_stylesheets)
+end
 
 # Will paginate
 gem 'will_paginate' if yes?("Install will_paginate?")
