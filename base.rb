@@ -1,7 +1,8 @@
 git :init
 
-FileUtils.touch(%w(tmp/.gitignore log/.gitignore vendor/.gitignore), :verbose => true)
-FileUtils.copy("config/database.yml", "config/example_database.yml", :verbose => true)
+run "touch tmp/.gitignore log/.gitignore vendor/.gitignore"
+run "cp config/database.yml config/database.dist.yml"
+run "rm public/index.html"
 
 # GIT ignore
 file ".gitignore", <<-END
@@ -11,58 +12,74 @@ config/database.yml
 db/*.sqlite3
 END
 
-# Plugins
-plugin "restful_authentication", :git => "git://github.com/technoweenie/restful-authentication.git"
-plugin "declarative_authorization", :git => "git://github.com/stffn/declarative_authorization.git"
-plugin 'will_paginate', :git => 'git://github.com/mislav/will_paginate.git', :submodule => true
+# Nifty generators
+run("sudo gem install nifty-generators")
+generate(:nifty_layout)
 
-# Gems
-# gem "stffn-declarative_authorization", :lib => "declarative_authorization", :source => 'http://gems.github.com'
-gem "haml"
+# HAML
+if yes?("Install haml?")
+  gem "haml" 
+  run "haml --rails ."
+end
+
+# Authlogic
+if yes?("Install authlogic?")
+  gem "authlogic"
+  
+  file "config/authorization_rules.rb", <<-END
+    authorization do
+      # TODO
+    end
+    privileges do
+      # default privilege hierarchies to facilitate RESTful Rails apps
+      privilege :manage, :includes => [:create, :read, :update, :delete]
+      privilege :read, :includes => [:index, :show]
+      privilege :create, :includes => :new
+      privilege :update, :includes => :edit
+      privilege :delete, :includes => :destroy
+    end
+  END
+  
+  if yes?("Generate user_session, user, role models and user_sessions authbasic components?")
+    generate(:session, "user_session")
+    generate(:nifty_scaffold, "user", "login:string email:string crypted_password:string password_salt:string persistence_token:string single_access_token:string show new edit")
+    generate(:nifty_scaffold, "role", "name:string new edit")
+    generate(:controller, "user_sessions")
+    
+    route "map.resource :user_session"
+    
+    file "app/models/user.rb", <<-END
+    class User < ActiveRecord::Base
+      acts_as_authentic
+
+      attr_protected :password, :password_confirmation
+    end
+    END
+  end
+end
+
+# Declarative authorization
+gem "declarative_authorization" if yes?("Install declarative_authorization?")
+
+# Formtastic
+gem "formtastic" if yes?("Install formtastic?")
+
+# Will paginate
+gem 'will_paginate' if yes?("Install will_paginate?")
+
 rake "gems:install", :sudo => true
 
-# Generate
-generate(:authenticated, "user", "sessions")
-generate(:model, "role", "name:string")
-
-run "haml --rails ."
-
-# Files
-file "config/authorization_rules.rb", <<-END
-authorization do
-  # TODO
+# Pages
+if yes?("Generate pages?")
+  generate(:nifty_scaffold, "page", "title:string name:string content:text active:boolean show new edit")
+  route 'map.root :controller => "pages", :action => "show", :id => "welcome"'
 end
-
-privileges do
-  # default privilege hierarchies to facilitate RESTful Rails apps
-  privilege :manage, :includes => [:create, :read, :update, :delete]
-  privilege :read, :includes => [:index, :show]
-  privilege :create, :includes => :new
-  privilege :update, :includes => :edit
-  privilege :delete, :includes => :destroy
-end
-END
-
-file "db/migrate/20090129183012_initial_migration.rb", <<-END
-class InitialMigration < ActiveRecord::Migration
-  def self.up
-    create_table "roles_users" do |t|
-      t.references :role
-      t.references :user
-    end
-  end
-  
-  def self.down
-    drop_table "roles_users"
-  end
-end
-END
-
-git :submodule => "init"
 
 # Freeze Rails and gems
-freeze!
+rake "rails:freeze:gems"
+rake "gems:unpack"
 
 rake "db:migrate"
 
-git :add => ".", :commit => "-m 'initial commit'"
+git :commit => "-m 'initial commit'"
+git :add => "."
