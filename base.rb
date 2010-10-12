@@ -8,6 +8,7 @@ gem "rspec-rails", :group => :test
 gem "haml-rails"
 gem "jquery-rails"
 gem "factory_girl_rails", :group => :test
+gem "remarkable_rails", :group => :test
 
 run "bundle"
 run "rm public/javascripts/rails.js"
