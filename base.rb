@@ -1,91 +1,30 @@
-git :init
+gem "inherited_resources"
+gem "formtastic"
+gem "haml"
+gem "sass"
+gem "rails3-generators", :group => :development
+gem "rspec", :group => :test
+gem "rspec-rails", :group => :test
+gem "haml-rails"
+gem "jquery-rails"
 
-run "touch tmp/.gitignore log/.gitignore vendor/.gitignore"
-run "cp config/database.yml config/database.dist.yml"
-run "rm public/index.html"
+run "bundle"
+run "rm public/javascripts/rails.js"
 
-# GIT ignore
-file ".gitignore", <<-END
-log/*.log
-tmp/**/*
-config/database.yml
-db/*.sqlite3
+generate "formtastic:install"
+generate "jquery:install"
+
+application <<-END
+  config.time_zone = 'Stockholm'
+  
+  config.generators do |g|
+    g.stylesheets false
+    g.test_framework :rspec
+    g.fixture_replacement :factory_girl
+  end
 END
 
-# Nifty generators
-run("sudo gem install nifty-generators")
-generate(:nifty_layout)
-
-# HAML
-if yes?("Install haml?")
-  gem "haml" 
-  run "haml --rails ."
+file "lib/templates/rails/controller/controller.rb", <<-END
+class <%= class_name %>Controller < InheritedResources::Base
 end
-
-# Authlogic
-if yes?("Install authlogic?")
-  gem "authlogic"
-  
-  if yes?("Generate user_session, user, role models and user_sessions authlogic components?")
-    generate(:session, "user_session")
-    generate(:nifty_scaffold, "user", "login:string email:string crypted_password:string password_salt:string persistence_token:string single_access_token:string show new edit")
-    generate(:nifty_scaffold, "role", "name:string new edit")
-    generate(:controller, "user_sessions")
-    
-    route "map.resource :user_session"
-    
-    file "app/models/user.rb", <<-END
-    class User < ActiveRecord::Base
-      acts_as_authentic
-
-      attr_protected :password, :password_confirmation
-    end
-    END
-  end
-end
-
-# Declarative authorization
-if yes?("Install declarative_authorization?")
-  gem "declarative_authorization"
-  
-  file "config/authorization_rules.rb", <<-END
-    authorization do
-      # TODO
-    end
-    privileges do
-      # default privilege hierarchies to facilitate RESTful Rails apps
-      privilege :manage, :includes => [:create, :read, :update, :delete]
-      privilege :read, :includes => [:index, :show]
-      privilege :create, :includes => :new
-      privilege :update, :includes => :edit
-      privilege :delete, :includes => :destroy
-    end
-  END
-end
-
-# Formtastic
-if yes?("Install formtastic?")
-  gem "formtastic"
-  
-  generate(:formtastic_stylesheets)
-end
-
-# Will paginate
-gem 'will_paginate' if yes?("Install will_paginate?")
-
-rake "gems:install", :sudo => true
-
-# Pages
-if yes?("Generate pages?")
-  generate(:nifty_scaffold, "page", "title:string name:string content:text active:boolean show new edit")
-  route 'map.root :controller => "pages", :action => "show", :id => "welcome"'
-end
-
-# Freeze Rails and gems
-rake "rails:freeze:gems"
-rake "gems:unpack"
-
-rake "db:migrate"
-
-git :commit => "-m 'initial commit'"
-git :add => "."
+END
