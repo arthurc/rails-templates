@@ -9,12 +9,17 @@ gem "haml-rails"
 gem "jquery-rails"
 gem "factory_girl_rails", :group => :test
 gem "shoulda", :group => :test
+gem "cucumber", :group => :test
+gem "cucumber-rails", :group => :test
+gem "database_cleaner", :group => :test
+gem "capybara", :group => :test
 
 run "bundle"
 run "rm public/javascripts/rails.js"
 
 generate "formtastic:install"
 generate "jquery:install"
+generate "cucumber:install", "--capybara", "--rspec"
 
 application <<-END
   config.time_zone = 'Stockholm'
